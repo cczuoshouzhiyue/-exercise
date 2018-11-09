@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<style>
+    div{
+        width: 100%;
+        text-align: center;
+        margin-top: 8%;
+    }
+    .btn{
+        position: absolute;
+        width: 400px;
+        height: 400px;
+        top: 15%;
+        right: 0;
+    }
+    .btn button{
+        width: 100px;
+        height: 80px;
+        border-radius: 20px;
+        outline: none;
+        border: none;
+        position: relative;
+    }
+    .poins{
+        position: absolute;
+        top: 0;
+        left: 14%;
+        display: inline-block;
+        width: 200px;
+    }
+    .up{
+        top:  -165px;
+        left: 50px;
+    }
+    .down {
+        right: 50px;
+        top: 5px;
+    }
+</style>
+<body>
+
+<div>
+    <canvas  width="800" height="500" id="canvas" style="border: 1px solid #eee"></canvas>
+</div>
+<div class="btn">
+    <button onclick="left()" class="left" >left</button>
+    <button onclick="ok()" class="start" id="ok">开始</button>
+    <!--<button onclick="purse()">暂停</button>-->
+
+    <button onclick="right()" class="right">right</button>
+    <button onclick="up()" class="up">up</button>
+    <button onclick="down()" class="down">down</button>
+</div>
+<div class="poins">分数：<span id="points">0</span></div>
+</body>
+</html>
+<script>
+    var canvas = document.getElementById('canvas');
+    var ctx = canvas.getContext('2d');
+    const size = 20;
+    var times = 0;
+    var timer = null;
+    var points = 0;
+
+    function Rect(clientX, clientY,width,height,color) {
+        this.clientX = clientX;
+        this.clientY = clientY;
+        this.width = width;
+        this.height = height;
+        this.color= color;
+    }
+    Rect.prototype.draw = function () {
+        ctx.beginPath();
+        ctx.rect(this.clientX,this.clientY,this.width,this.height);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+        ctx.stroke();
+
+    }
+    Rect.prototype.move = function () {
+        switch(snake.direc) {
+            case 37:
+                this.clientX -= this.width;
+                break;
+            case 38:
+                this.clientY -= this.height;
+                break;
+            case 39:
+                this.clientX += this.width;
+                break;
+            case 40:
+                this.clientY += this.height;
+                break;
+        }
+    }
+    function Snake() {
+        this.update = true;
+        this.direc = 37;
+        this.isOnBody = false;
+        this.bodyArray = [];
+        for (var i = 0; i< 4; i++) {
+            this.bodyArray.push(new Rect(300 + i * size, 300,size,size,'red'))
+        }
+        this.bodyArray[0].color = 'blue';
+        for(var i = 0; i< this.bodyArray.length; i++) {
+            this.bodyArray[i].draw();
+        }
+    }
+    Snake.prototype.move = function () {
+         this.update = false;
+         this.bodyArray.splice(1,0,new Rect(this.bodyArray[0].clientX,this.bodyArray[0].clientY,size,size,'red'));
+         if (food.clientX === this.bodyArray[0].clientX && food.clientY === this.bodyArray[0].clientY) {
+                food = createFood();
+                points = 10 + points;
+                document.getElementById('points').innerHTML = points + '分'
+         } else{
+             this.bodyArray.pop();
+         }
+         this.bodyArray[0].move();
+    }
+
+    function createFood() {
+        var isOnSnake = true;
+        while (isOnSnake) {
+            var x = round(0, 800/size);
+            var y = round(0, 500/size);
+            for (var i = 0; i < snake.bodyArray.length; i++) {
+               if (snake.bodyArray[i].clientX === x && snake.bodyArray[i].clientY === y){
+                   isOnSnake = true;
+                   break;
+               }else{
+                   isOnSnake = false;
+               }
+            }
+        }
+        return new Rect(x, y, size, size, 'green');
+    }
+    //随机数
+    function round(min, max) {
+        return parseInt(Math.random() * (max - min) + min) * 20;
+    }
+
+    function ani() {
+        times++;
+        if(times % 20 == 0) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            //食物在蛇之前画，就不会出现蛇头变色的现象
+            food.draw();
+            snake.move();
+            snake.bodyArray.map((item) => {
+                item.draw();
+            })
+        }
+        for (var i = 1; i<snake.bodyArray.length; i++) {
+            var item = snake.bodyArray[i];
+            if((snake.bodyArray[0].clientX == item.clientX) && (snake.bodyArray[0].clientY == item.clientY)) {
+                snake.isOnBody = true;
+                break;
+            } else {
+                snake.isOnBody = false
+            }
+        }
+        //当撞墙或者撞到身体就停止运动
+        if(snake.bodyArray[0].clientX < 0 || snake.bodyArray[0].clientX > canvas.width - size || snake.bodyArray[0].clientY < 0 || snake.bodyArray[0].clientY > canvas.height - size || snake.isOnBody) {
+            window.cancelAnimationFrame(timer);
+        } else {
+            timer =  window.requestAnimationFrame(ani)
+        }
+    }
+    var snake = new Snake();
+    var food = createFood();
+
+
+    function left() {
+        direction(37)
+    }
+    function right() {
+        direction(39)
+    }
+    function up() {
+        direction(38)
+    }
+    function down() {
+        direction(40)
+    }
+    function ok() {
+       var a = document.getElementById('ok');
+       if (a.innerHTML === '开始'){
+           a.innerHTML = '暂停'
+           return start();
+       }
+        if (a.innerHTML === '暂停'){
+            a.innerHTML = '开始'
+            return purse();
+        }
+    }
+    function start() {
+        if (times === 0) {
+           return ani()
+        }
+        timer = window.requestAnimationFrame(ani);
+    }
+    function purse () {
+        window.cancelAnimationFrame(timer);
+    }
+
+    document.onkeydown = function (e) {
+        if(!snake.update) {
+            direction(e.keyCode)
+        }
+    }
+
+    function direction(keyCode) {
+        switch(keyCode) {
+            case 37:
+                if(snake.direc != 39) {
+                    snake.direc = 37;
+                    snake.update = true;
+                }
+                break;
+            case 38:
+                if(snake.direc != 40) {
+                    snake.direc = 38;
+                    snake.update = true;
+                }
+                break;
+            case 39:
+                if(snake.direc != 37) {
+                    snake.direc = 39;
+                    snake.update = true;
+                }
+                break;
+            case 40:
+                if(snake.direc != 38) {
+                    snake.direc = 40;
+                    snake.update = true;
+                }
+                break;
+        }
+    }
+
+
+</script>
